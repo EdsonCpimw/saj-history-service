@@ -1,0 +1,26 @@
+# DSV
+spring:
+  application:
+    name: saj-history-service-api
+  config:
+    activate:
+      on-profile: local
+  data:
+    mongodb:
+      uri: mongodb://root:example@localhost:27017/saj_historico?authSource=admin
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: history-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+
+server:
+  port: 8081  # porta diferente do SAJ-API
+
+logging:
+  level:
+    com.software.saj_history_service: INFO

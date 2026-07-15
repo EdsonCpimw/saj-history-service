@@ -1,0 +1,94 @@
+version: "3.9"
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: saj-zookeeper
+    mem_limit: 128m
+    networks:
+      - broker-kafka
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    restart: always
+
+  kafka:
+    image: confluentinc/cp-kafka:7.8.5
+    container_name: saj-kafka
+    mem_limit: 768m
+    networks:
+      - broker-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx512m"
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    restart: always
+
+  akhq:
+    image: tchiotludo/akhq:latest
+    container_name: saj-akhq
+    mem_limit: 512m
+    networks:
+      - broker-kafka
+    depends_on:
+      - kafka
+    ports:
+      - "8084:8080"
+    environment:
+      JAVA_OPTS: "-Xms128m -Xmx384m"
+      AKHQ_CONFIGURATION: |
+        akhq:
+          connections:
+            local:
+              properties:
+                bootstrap.servers: "kafka:29092"
+    restart: always
+
+  mongo:
+    image: mongo
+    container_name: saj-mongodb
+    mem_limit: 512m
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_INITDB_DATABASE: saj_history
+    volumes:
+      - mongodb_data:/data/db
+
+  sbootapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: saj-history-service
+    networks:
+      - broker-kafka
+    depends_on:
+      - mongo
+      - kafka
+    ports:
+      - "${API_PORT}:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      MONGO_USERNAME: ${MONGO_USERNAME}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
+    restart: always
+
+networks:
+  broker-kafka:
+    driver: bridge
+
+volumes:
+  mongodb_data:

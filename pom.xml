@@ -105,6 +105,7 @@
 		</dependency>
 	</dependencies>
 	<build>
+		<finalName>saj-history-service</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
